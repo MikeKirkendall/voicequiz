@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superpowered Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .version-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .version-card {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .version-card.selected {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Superpowered Integration Test</h1>
+        
+        <div id="status" class="status info">Initializing...</div>
+        
+        <div class="test-section">
+            <h3>1. Superpowered SDK Test</h3>
+            <button id="test-sdk-btn" onclick="testSuperpoweredSDK()">Test SDK Loading</button>
+            <div id="sdk-status"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. Audio Recording Test</h3>
+            <button id="test-recording-btn" onclick="testRecording()" disabled>Test Recording</button>
+            <div id="recording-status"></div>
+            <div id="recording-controls" style="display: none;">
+                <button id="start-record-btn" onclick="startRecording()">Start Recording</button>
+                <button id="stop-record-btn" onclick="stopRecording()" disabled>Stop Recording</button>
+                <button id="play-recording-btn" onclick="playRecording()" disabled>Play Recording</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. Audio Processing Test</h3>
+            <button id="test-processing-btn" onclick="testProcessing()" disabled>Test Processing</button>
+            <div id="processing-status"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. Version Playback Test</h3>
+            <div id="version-playback" style="display: none;">
+                <div class="version-grid">
+                    <div class="version-card" data-version="A">
+                        <h4>Version A</h4>
+                        <p>Original (Baseline)</p>
+                        <button onclick="playVersion('A')">Play A</button>
+                    </div>
+                    <div class="version-card" data-version="B">
+                        <h4>Version B</h4>
+                        <p>Light Bone Conduction</p>
+                        <button onclick="playVersion('B')">Play B</button>
+                    </div>
+                    <div class="version-card" data-version="C">
+                        <h4>Version C</h4>
+                        <p>Medium Bone Conduction</p>
+                        <button onclick="playVersion('C')">Play C</button>
+                    </div>
+                    <div class="version-card" data-version="D">
+                        <h4>Version D</h4>
+                        <p>Deep Bone Conduction</p>
+                        <button onclick="playVersion('D')">Play D</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>5. Cleanup Test</h3>
+            <button id="cleanup-btn" onclick="cleanup()">Cleanup Resources</button>
+            <div id="cleanup-status"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Global variables
+        let audioProcessor = null;
+        let audioRecorder = null;
+        let currentRecording = null;
+        let processedVersions = null;
+        
+        // Status update function
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        // Test Superpowered SDK loading
+        window.testSuperpoweredSDK = async function() {
+            try {
+                updateStatus('Testing Superpowered SDK loading...', 'info');
+                
+                // Import Superpowered SDK
+                const { SuperpoweredGlue, SuperpoweredWebAudio } = await import('/node_modules/@superpoweredsdk/web/dist/Superpowered.js');
+                
+                // Initialize Superpowered
+                const superpowered = await SuperpoweredGlue.Instantiate('ExampleLicenseKey-WillExpire-OnNextUpdate');
+                
+                // Create WebAudio manager
+                const webaudioManager = new SuperpoweredWebAudio(44100, superpowered);
+                
+                document.getElementById('sdk-status').innerHTML = '<div class="status success">✅ Superpowered SDK loaded successfully!</div>';
+                document.getElementById('test-recording-btn').disabled = false;
+                
+                updateStatus('Superpowered SDK test completed successfully', 'success');
+                
+            } catch (error) {
+                console.error('Superpowered SDK test failed:', error);
+                document.getElementById('sdk-status').innerHTML = `<div class="status error">❌ Superpowered SDK test failed: ${error.message}</div>`;
+                updateStatus('Superpowered SDK test failed', 'error');
+            }
+        };
+        
+        // Test audio recording
+        window.testRecording = async function() {
+            try {
+                updateStatus('Testing audio recording...', 'info');
+                
+                // Check if AudioRecorder is available
+                if (!window.AudioRecorder) {
+                    throw new Error('AudioRecorder not found');
+                }
+                
+                audioRecorder = new window.AudioRecorder();
+                const permissionCheck = await audioRecorder.checkMicrophonePermission();
+                
+                if (!permissionCheck.supported) {
+                    throw new Error('Microphone not supported in this browser');
+                }
+                
+                if (!permissionCheck.permitted) {
+                    throw new Error('Microphone permission denied');
+                }
+                
+                document.getElementById('recording-status').innerHTML = '<div class="status success">✅ Audio recording test passed!</div>';
+                document.getElementById('recording-controls').style.display = 'block';
+                
+                updateStatus('Audio recording test completed successfully', 'success');
+                
+            } catch (error) {
+                console.error('Audio recording test failed:', error);
+                document.getElementById('recording-status').innerHTML = `<div class="status error">❌ Audio recording test failed: ${error.message}</div>`;
+                updateStatus('Audio recording test failed', 'error');
+            }
+        };
+        
+        // Start recording
+        window.startRecording = async function() {
+            try {
+                updateStatus('Starting recording...', 'info');
+                
+                document.getElementById('start-record-btn').disabled = true;
+                document.getElementById('stop-record-btn').disabled = false;
+                
+                await audioRecorder.startRecording();
+                
+                updateStatus('Recording started', 'success');
+                
+            } catch (error) {
+                console.error('Failed to start recording:', error);
+                updateStatus('Failed to start recording', 'error');
+                document.getElementById('start-record-btn').disabled = false;
+                document.getElementById('stop-record-btn').disabled = true;
+            }
+        };
+        
+        // Stop recording
+        window.stopRecording = async function() {
+            try {
+                updateStatus('Stopping recording...', 'info');
+                
+                document.getElementById('stop-record-btn').disabled = true;
+                
+                currentRecording = await audioRecorder.stopRecording();
+                
+                document.getElementById('play-recording-btn').disabled = false;
+                document.getElementById('test-processing-btn').disabled = false;
+                
+                updateStatus('Recording completed', 'success');
+                
+            } catch (error) {
+                console.error('Failed to stop recording:', error);
+                updateStatus('Failed to stop recording', 'error');
+                document.getElementById('stop-record-btn').disabled = false;
+            }
+        };
+        
+        // Play recording
+        window.playRecording = function() {
+            if (!currentRecording) {
+                updateStatus('No recording to play', 'error');
+                return;
+            }
+            
+            try {
+                const url = URL.createObjectURL(currentRecording);
+                const audio = new Audio(url);
+                audio.play();
+                
+                updateStatus('Playing original recording', 'info');
+                
+            } catch (error) {
+                console.error('Failed to play recording:', error);
+                updateStatus('Failed to play recording', 'error');
+            }
+        };
+        
+        // Test audio processing
+        window.testProcessing = async function() {
+            try {
+                updateStatus('Testing audio processing...', 'info');
+                
+                if (!window.AudioProcessor) {
+                    throw new Error('AudioProcessor not found');
+                }
+                
+                // Initialize audio processor
+                audioProcessor = new window.AudioProcessor();
+                await audioProcessor.initialize();
+                
+                // Convert blob to AudioBuffer
+                const arrayBuffer = await currentRecording.arrayBuffer();
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                // Process audio
+                processedVersions = await audioProcessor.processRecording(audioBuffer);
+                
+                document.getElementById('processing-status').innerHTML = '<div class="status success">✅ Audio processing completed successfully!</div>';
+                document.getElementById('version-playback').style.display = 'block';
+                
+                updateStatus('Audio processing test completed successfully', 'success');
+                
+            } catch (error) {
+                console.error('Audio processing test failed:', error);
+                document.getElementById('processing-status').innerHTML = `<div class="status error">❌ Audio processing test failed: ${error.message}</div>`;
+                updateStatus('Audio processing test failed', 'error');
+            }
+        };
+        
+        // Play version
+        window.playVersion = function(version) {
+            if (!processedVersions || !processedVersions.has(version)) {
+                updateStatus(`Version ${version} not available`, 'error');
+                return;
+            }
+            
+            try {
+                const audioBuffer = processedVersions.get(version);
+                const source = audioProcessor.createAudioSource(audioBuffer);
+                
+                if (source) {
+                    source.start(0);
+                    updateStatus(`Playing version ${version}`, 'info');
+                }
+                
+            } catch (error) {
+                console.error(`Failed to play version ${version}:`, error);
+                updateStatus(`Failed to play version ${version}`, 'error');
+            }
+        };
+        
+        // Cleanup
+        window.cleanup = function() {
+            try {
+                updateStatus('Cleaning up resources...', 'info');
+                
+                if (audioProcessor) {
+                    audioProcessor.cleanup();
+                    audioProcessor = null;
+                }
+                
+                if (audioRecorder) {
+                    audioRecorder.cleanup();
+                    audioRecorder = null;
+                }
+                
+                currentRecording = null;
+                processedVersions = null;
+                
+                document.getElementById('cleanup-status').innerHTML = '<div class="status success">✅ Cleanup completed successfully!</div>';
+                updateStatus('Cleanup completed successfully', 'success');
+                
+            } catch (error) {
+                console.error('Cleanup failed:', error);
+                document.getElementById('cleanup-status').innerHTML = `<div class="status error">❌ Cleanup failed: ${error.message}</div>`;
+                updateStatus('Cleanup failed', 'error');
+            }
+        };
+        
+        // Initialize test page
+        updateStatus('Test page loaded. Click "Test SDK Loading" to begin.', 'info');
+    </script>
+    
+    <!-- Load required scripts -->
+    <script src="scripts/audio-recorder.js"></script>
+    <script src="scripts/audio-processor.js"></script>
+</body>
+</html> 

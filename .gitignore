@@ -1,0 +1,12 @@
+# dependencies
+node_modules/
+
+# VSCode settings
+.vscode/
+
+# build artifacts (if you ever generate any)
+dist/
+build/
+
+# logs
+*.log 

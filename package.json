@@ -1,0 +1,28 @@
+{
+  "name": "voice-quiz-app",
+  "version": "1.0.0",
+  "description": "Voice quiz application with Superpowered audio processing",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8000 -c-1",
+    "dev": "npx http-server -p 8000 -c-1 --cors",
+    "build": "echo 'No build step required for static files'"
+  },
+  "dependencies": {
+    "@superpoweredsdk/web": "^2.7.2"
+  },
+  "keywords": [
+    "audio",
+    "voice",
+    "quiz",
+    "superpowered",
+    "webaudio"
+  ],
+  "author": "Voice Quiz Team",
+  "license": "MIT",
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}
