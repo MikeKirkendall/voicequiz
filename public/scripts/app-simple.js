@@ -943,6 +943,17 @@ class VoiceQuizApp {
         };
         
         // CRITICAL: Store the final mapping in the session for later translation
+        // Ensure question data exists before storing mapping
+        if (!window.voiceQuizApp.session.questions[this.currentQuestion]) {
+            window.voiceQuizApp.session.add({
+                index: this.currentQuestion,
+                urls: {},
+                processed: {},
+                selectedVersion: null,
+                reasons: [],
+                randomizedVersions: null
+            });
+        }
         const currentQuestionData = window.voiceQuizApp.session.questions[this.currentQuestion];
         if (currentQuestionData) {
             currentQuestionData.randomizedVersions = {
