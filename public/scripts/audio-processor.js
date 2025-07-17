@@ -27,13 +27,13 @@ class AudioProcessor {
 
       // 2. Load Superpowered SDK
       console.log('🎵 Loading Superpowered SDK...');
-      const { SuperpoweredGlue, SuperpoweredWebAudio } = await import('/lib/Superpowered.js');
+      const { SuperpoweredGlue, SuperpoweredWebAudio } = await import('../lib/Superpowered.js');
       console.log('✅ Superpowered SDK loaded');
 
       // 3. Initialize Superpowered WASM
       this.superpowered = await SuperpoweredGlue.Instantiate(
         'ExampleLicenseKey-WillExpire-OnNextUpdate',
-        '/lib/SuperpoweredWebAssembly.wasm'
+        '../lib/SuperpoweredWebAssembly.wasm'
       );
       console.log('✅ Superpowered WebAssembly initialized');
 
@@ -48,7 +48,7 @@ class AudioProcessor {
       console.log('🎵 Creating AudioWorklet with corrected API...');
       
       this.workletNode = await this.webaudioManager.createAudioNodeAsync(
-        '/scripts/voice-processor-worklet.js',  // url
+        'voice-processor-worklet.js',  // url (relative to current script location)
         'VoiceProcessor',                       // className
         (message) => {                          // callback
           this.handleWorkletMessage(message);
