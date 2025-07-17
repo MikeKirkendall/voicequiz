@@ -303,38 +303,5 @@
     <script src="scripts/device-aware.js"></script>
     <script src="scripts/app-simple.js"></script>
     <script src="scripts/audio-format-fix.js"></script>
-    
-    <script>
-    // Fix for event listener timing issue
-    document.addEventListener('DOMContentLoaded', () => {
-        const waitForApp = () => {
-            if (window.voiceQuizApp) {
-                console.log('✅ App loaded, attaching event listeners...');
-                
-                const startBtn = document.getElementById('start-quiz-btn');
-                if (startBtn) {
-                    startBtn.addEventListener('click', () => {
-                        console.log('🎯 Start button clicked!');
-                        window.voiceQuizApp.showRegistration();
-                    });
-                    console.log('✅ Start button event listener attached');
-                }
-                
-                const testMicBtn = document.getElementById('test-microphone-btn');
-                if (testMicBtn) {
-                    testMicBtn.addEventListener('click', () => {
-                        console.log('🎤 Test microphone button clicked!');
-                        window.voiceQuizApp.testMicrophone();
-                    });
-                    console.log('✅ Test microphone button event listener attached');
-                }
-            } else {
-                setTimeout(waitForApp, 100);
-            }
-        };
-        
-        waitForApp();
-    });
-    </script>
 </body>
 </html>
