@@ -33,7 +33,7 @@ class AudioProcessor {
       // 3. Initialize Superpowered WASM
       this.superpowered = await SuperpoweredGlue.Instantiate(
         'ExampleLicenseKey-WillExpire-OnNextUpdate',
-        '../lib/SuperpoweredWebAssembly.wasm'
+        './lib/SuperpoweredWebAssembly.wasm'
       );
       console.log('✅ Superpowered WebAssembly initialized');
 
