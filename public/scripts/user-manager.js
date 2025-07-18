@@ -123,18 +123,16 @@ class UserManager {
     }
 
     initializeVersionOrder() {
-        // Create a randomized mapping of A/B/C/D to processing types
-        const processingTypes = ['raw', 'light', 'medium', 'deep'];
-        const shuffled = [...processingTypes].sort(() => Math.random() - 0.5);
-        
+        // For counter-balanced trials, we use a fixed mapping
+        // This ensures consistent version assignment across all trials
         this.versionOrder = {
-            A: shuffled[0],
-            B: shuffled[1], 
-            C: shuffled[2],
-            D: shuffled[3]
+            A: 'raw',     // Raw version is always A
+            B: 'light',   // Light processing is B
+            C: 'medium',  // Medium processing is C
+            D: 'deep'     // Deep processing is D
         };
         
-        console.log('Version order initialized:', this.versionOrder);
+        console.log('Counter-balanced version order initialized:', this.versionOrder);
     }
 
     validateUserData(userData) {

@@ -6,6 +6,15 @@ window.voiceQuizApp.session = window.voiceQuizApp.session || {
   add(q) { this.questions.push(q); }
 };
 
+// Helper function for array shuffling
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 // Safe range computation function that won't overflow the call stack
 function computeRange(buffer) {
   let lo = Infinity, hi = -Infinity;
@@ -234,49 +243,97 @@ class VoiceQuizApp {
     }
 
     generateTrials() {
-        // Create trial structure: 6 real trials (2 each of light, medium, deep) + 1 catch trial
-        const trialTypes = [
-            { type: 'light', isCatch: false },
-            { type: 'light', isCatch: false },
-            { type: 'medium', isCatch: false },
-            { type: 'medium', isCatch: false },
-            { type: 'deep', isCatch: false },
-            { type: 'deep', isCatch: false },
-            { type: 'raw', isCatch: true }  // Catch trial: raw vs raw
+        console.log('🎯 Generating counter-balanced trial set...');
+        
+        // 1) Build nine real trials: 3× each processing mode
+        const modes = ['light', 'medium', 'deep']
+            .flatMap(type => Array(3).fill(type));
+        
+        // 2) Shuffle processing mode order
+        const shuffledModes = shuffle([...modes]);
+        
+        // 3) Build a side-assignment mask so raw appears on right (B) at least 5/9 times
+        // This means processed version appears on left 4/9 times and right 5/9 times
+        const sideMask = Array(4).fill('procLeft')
+            .concat(Array(5).fill('procRight'));
+        const shuffledSideMask = shuffle([...sideMask]);
+        
+        // 4) Nine diverse prompts for the real trials
+        const prompts = [
+            "What's your favorite food and why do you love it?",
+            "Describe your ideal weekend morning and what you'd do.",
+            "What always cheers you up when you're having a bad day?", 
+            "Tell me about a place that makes you feel peaceful and why.",
+            "What's your favorite way to spend a day off and what makes it special?",
+            "What's the best advice someone has ever given you and why?",
+            "How do you like to unwind after a long day?",
+            "What made you smile today and what happened?",
+            "What's your favorite season of the year and what do you enjoy about it?"
         ];
         
-        // Shuffle the trials
-        const shuffledTrials = [...trialTypes].sort(() => Math.random() - 0.5);
+        // 5) Build the 9 test trials with proper integration
+        const testTrials = shuffledModes.map((mode, i) => {
+            const leftIsProc = shuffledSideMask[i] === 'procLeft';
+            
+            return {
+                type: mode,
+                isCatch: false,
+                question: prompts[i],
+                hint: "Take your time and speak naturally",
+                comparisonSetup: {
+                    leftVersion: leftIsProc ? mode : 'raw',
+                    rightVersion: leftIsProc ? 'raw' : mode,
+                    correctAnswer: leftIsProc ? 'left' : 'right' // For analysis
+                }
+            };
+        });
         
-        // Add question prompts to each trial
-        const questions = [
-            "What's your favorite place to relax and why?",
-            "Describe a memorable conversation you had recently.",
-            "What's something you're passionate about?",
-            "How would you describe your ideal weekend?",
-            "What's a skill you'd love to learn and why?",
-            "Describe a place you'd love to visit.",
-            "What's the best advice you've ever received?"
-        ];
+        // 6) One catch trial (raw vs raw) 
+        const catchTrial = {
+            type: 'raw',
+            isCatch: true,
+            question: "Tell me about a skill you're proud of and how you developed it.",
+            hint: "This is a validation question - listen carefully",
+            comparisonSetup: {
+                leftVersion: 'raw',
+                rightVersion: 'raw', 
+                correctAnswer: 'either' // Both should sound identical
+            }
+        };
         
-        return shuffledTrials.map((trial, index) => ({
-            ...trial,
-            question: questions[index],
-            hint: "Think about your response and speak naturally"
-        }));
+        // 7) Insert the catch at a random position (avoid first/last for subtlety)
+        const allTrials = [...testTrials];
+        const catchPosition = 2 + Math.floor(Math.random() * (allTrials.length - 3)); // Positions 2-7
+        allTrials.splice(catchPosition, 0, catchTrial);
+        
+        console.log('✅ Generated trial set:', {
+            totalTrials: allTrials.length,
+            realTrials: testTrials.length,
+            catchTrials: 1,
+            catchPosition: catchPosition + 1,
+            processingModes: shuffledModes,
+            sideDistribution: {
+                processedOnLeft: shuffledSideMask.filter(s => s === 'procLeft').length,
+                processedOnRight: shuffledSideMask.filter(s => s === 'procRight').length,
+                rawOnRight: shuffledSideMask.filter(s => s === 'procRight').length, // Raw appears on right (B) 5/9 times
+                rawOnLeft: shuffledSideMask.filter(s => s === 'procLeft').length   // Raw appears on left (A) 4/9 times
+            }
+        });
+        
+        return allTrials;
     }
 
     async initializeApp() {
         try {
-            // Ensure userManager has a default versionOrder
+            // Ensure userManager has the correct versionOrder for counter-balanced trials
             if (window.userManager && !window.userManager.versionOrder) {
                 window.userManager.versionOrder = {
-                    A: 'deep',    // full restoration
-                    B: 'raw',     // unprocessed
-                    C: 'light',   // partial
-                    D: 'medium'   // thought-style
+                    A: 'raw',     // Raw version is always A
+                    B: 'light',   // Light processing is B
+                    C: 'medium',  // Medium processing is C
+                    D: 'deep'     // Deep processing is D
                 };
-                console.log('Default versionOrder initialized:', window.userManager.versionOrder);
+                console.log('Counter-balanced versionOrder initialized:', window.userManager.versionOrder);
             }
             
             // Check AudioWorklet support
@@ -914,32 +971,41 @@ class VoiceQuizApp {
             return versions; // Return original versions if no randomization available
         }
         
-        // Get current trial to determine which processed version we need
+        // Get current trial to determine the comparison setup
         const currentTrial = this.trials[this.currentQuestion];
-        const neededVersion = currentTrial.type; // 'light', 'medium', 'deep', or 'raw'
         
-        // CRITICAL: Always ensure one option is 'raw' and the other is the trial type
-        // For catch trials: both are 'raw'
-        // For regular trials: one is 'raw', one is the trial type (light/medium/deep)
-        const versionMapping = {
-            left: 'raw',
-            right: currentTrial.isCatch ? 'raw' : neededVersion
-        };
-        
-        // Randomize left/right position so raw isn't always on the left
-        let leftVersion, rightVersion;
-        if (Math.random() < 0.5) {
-            leftVersion = versionMapping.left;
-            rightVersion = versionMapping.right;
-        } else {
-            leftVersion = versionMapping.right;
-            rightVersion = versionMapping.left;
+        if (!currentTrial || !currentTrial.comparisonSetup) {
+            console.error('applyVersionRandomization: No comparison setup found for trial', this.currentQuestion);
+            return versions;
         }
         
-        // For two-choice system, we only need raw and the specified processed version
+        const { leftVersion, rightVersion } = currentTrial.comparisonSetup;
+        
+        // Map version types to actual version keys (A, B, C, D)
+        const getVersionKey = (versionType) => {
+            switch (versionType) {
+                case 'raw':
+                    return 'A'; // Raw version is always A
+                case 'light':
+                    return 'B'; // Light processing is B
+                case 'medium':
+                    return 'C'; // Medium processing is C
+                case 'deep':
+                    return 'D'; // Deep processing is D
+                default:
+                    console.warn(`Unknown version type: ${versionType}, using raw`);
+                    return 'A';
+            }
+        };
+        
+        // Get the actual version keys for left and right
+        const leftKey = getVersionKey(leftVersion);
+        const rightKey = getVersionKey(rightVersion);
+        
+        // Create the randomized version object
         const randomized = {
-            left: versions[leftVersion],
-            right: versions[rightVersion]
+            left: versions[leftKey],
+            right: versions[rightKey]
         };
         
         // CRITICAL: Store the final mapping in the session for later translation
@@ -964,24 +1030,28 @@ class VoiceQuizApp {
             // Also store trial info for context
             currentQuestionData.trialType = currentTrial.type;
             currentQuestionData.isCatch = currentTrial.isCatch;
+            currentQuestionData.comparisonSetup = currentTrial.comparisonSetup;
             
             console.log(`🎯 Question ${this.currentQuestion + 1} mapping stored:`, {
                 left: leftVersion,
                 right: rightVersion,
                 trialType: currentTrial.type,
-                isCatch: currentTrial.isCatch
+                isCatch: currentTrial.isCatch,
+                comparisonSetup: currentTrial.comparisonSetup
             });
         } else {
             console.error('⚠️ No currentQuestionData found for question', this.currentQuestion);
         }
         
         // DEBUG: Log the clean randomized object
-        console.log('🎲 Two-choice randomization applied:', {
+        console.log('🎲 Counter-balanced randomization applied:', {
             questionIndex: this.currentQuestion,
             trialType: currentTrial.type,
             isCatch: currentTrial.isCatch,
             leftVersion: leftVersion,
             rightVersion: rightVersion,
+            leftKey: leftKey,
+            rightKey: rightKey,
             randomizedKeys: Object.keys(randomized),
             availableVersions: Object.keys(versions)
         });
@@ -1269,15 +1339,37 @@ class VoiceQuizApp {
         
         // CRITICAL: Store selection in session with actual version name
         const currentQuestionData = window.voiceQuizApp.session.questions[this.currentQuestion];
+        const currentTrial = this.trials[this.currentQuestion];
+        
         if (currentQuestionData) {
             currentQuestionData.selectedChoice = choice; // Store the UI choice (left/right)
-            currentQuestionData.trialType = this.trials[this.currentQuestion].type;
-            currentQuestionData.isCatch = this.trials[this.currentQuestion].isCatch;
+            currentQuestionData.trialType = currentTrial.type;
+            currentQuestionData.isCatch = currentTrial.isCatch;
             
             // CRITICAL: Translate left/right choice to actual version name
             if (currentQuestionData.randomizedVersions) {
                 const actualVersion = currentQuestionData.randomizedVersions[choice];
                 currentQuestionData.selectedVersion = actualVersion;
+                
+                // Enhanced analytics for counter-balanced trials
+                if (currentTrial.comparisonSetup) {
+                    const { leftVersion, rightVersion, correctAnswer } = currentTrial.comparisonSetup;
+                    const selectedProcessing = choice === 'left' ? leftVersion : rightVersion;
+                    const isCorrectSide = (choice === 'left' && correctAnswer === 'left') || 
+                                         (choice === 'right' && correctAnswer === 'right');
+                    
+                    console.log(`🎯 Counter-balanced trial result:`, {
+                        question: this.currentQuestion + 1,
+                        processingMode: currentTrial.type,
+                        selectedSide: choice,
+                        selectedProcessing: selectedProcessing,
+                        comparison: `${leftVersion} vs ${rightVersion}`,
+                        preferredProcessed: selectedProcessing !== 'raw',
+                        isCatch: currentTrial.isCatch,
+                        correctAnswer: correctAnswer,
+                        isCorrectSide: currentTrial.isCatch ? 'N/A' : isCorrectSide
+                    });
+                }
                 
                 console.log(`✅ Question ${this.currentQuestion + 1} choice recorded:`, {
                     uiChoice: choice,
@@ -1295,7 +1387,7 @@ class VoiceQuizApp {
             console.error('⚠️ No currentQuestionData found for question', this.currentQuestion);
         }
         
-        console.log(`✅ Choice selected: ${choice} for trial type: ${this.trials[this.currentQuestion].type}`);
+        console.log(`✅ Choice selected: ${choice} for trial type: ${currentTrial.type}`);
     }
 
     playChoice(choice) {
@@ -1892,6 +1984,17 @@ class VoiceQuizApp {
         console.log('Current question:', this.currentQuestion);
         console.log('Total questions:', this.trials.length);
         
+        // Show trial structure
+        console.log('🎯 Trial structure:');
+        this.trials.forEach((trial, index) => {
+            console.log(`Trial ${index + 1}:`, {
+                type: trial.type,
+                isCatch: trial.isCatch,
+                question: trial.question,
+                comparisonSetup: trial.comparisonSetup
+            });
+        });
+        
         this.session.questions.forEach((question, index) => {
             console.log(`Question ${index + 1}:`, {
                 hasData: !!question,
@@ -1899,7 +2002,8 @@ class VoiceQuizApp {
                 selectedVersion: question?.selectedVersion,
                 randomizedVersions: question?.randomizedVersions,
                 trialType: question?.trialType,
-                isCatch: question?.isCatch
+                isCatch: question?.isCatch,
+                comparisonSetup: question?.comparisonSetup
             });
         });
         
@@ -1909,7 +2013,8 @@ class VoiceQuizApp {
             console.log('Current trial:', {
                 type: currentTrial.type,
                 isCatch: currentTrial.isCatch,
-                question: currentTrial.question
+                question: currentTrial.question,
+                comparisonSetup: currentTrial.comparisonSetup
             });
         }
     }
