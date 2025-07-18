@@ -981,32 +981,36 @@ class VoiceQuizApp {
         
         const { leftVersion, rightVersion } = currentTrial.comparisonSetup;
         
-        // Map version types to actual version keys (A, B, C, D)
-        const getVersionKey = (versionType) => {
-            switch (versionType) {
-                case 'raw':
-                    return 'A'; // Raw version is always A
-                case 'light':
-                    return 'B'; // Light processing is B
-                case 'medium':
-                    return 'C'; // Medium processing is C
-                case 'deep':
-                    return 'D'; // Deep processing is D
-                default:
-                    console.warn(`Unknown version type: ${versionType}, using raw`);
-                    return 'A';
-            }
-        };
+        // 🔍 DEBUG: Let's see exactly what we're working with
+        console.log('🔍 Raw versions object:', versions);
+        console.log('🔍 Version keys:', Object.keys(versions));
+        console.log('🔍 Looking for:', leftVersion, rightVersion);
+        console.log('🔍 Direct version mapping:', {
+            leftVersion,
+            rightVersion,
+            availableVersions: Object.keys(versions),
+            leftExists: leftVersion in versions,
+            rightExists: rightVersion in versions,
+            leftValue: versions[leftVersion],
+            rightValue: versions[rightVersion]
+        });
         
-        // Get the actual version keys for left and right
-        const leftKey = getVersionKey(leftVersion);
-        const rightKey = getVersionKey(rightVersion);
-        
-        // Create the randomized version object
+        // The audio processor returns versions with keys ['raw', 'light', 'medium', 'deep']
+        // So we can access them directly by version name
         const randomized = {
-            left: versions[leftKey],
-            right: versions[rightKey]
+            left: versions[leftVersion],
+            right: versions[rightVersion]
         };
+        
+        // 🔍 Verify we got actual audio data
+        console.log('🔍 Randomized version check:', {
+            leftType: typeof randomized.left,
+            rightType: typeof randomized.right,
+            leftIsFloat32: randomized.left instanceof Float32Array,
+            rightIsFloat32: randomized.right instanceof Float32Array,
+            leftLength: randomized.left?.length,
+            rightLength: randomized.right?.length
+        });
         
         // CRITICAL: Store the final mapping in the session for later translation
         // Ensure question data exists before storing mapping
@@ -1050,8 +1054,6 @@ class VoiceQuizApp {
             isCatch: currentTrial.isCatch,
             leftVersion: leftVersion,
             rightVersion: rightVersion,
-            leftKey: leftKey,
-            rightKey: rightKey,
             randomizedKeys: Object.keys(randomized),
             availableVersions: Object.keys(versions)
         });
