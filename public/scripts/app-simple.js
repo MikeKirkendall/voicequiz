@@ -178,12 +178,22 @@ function handleQuestionProcessed(questionIndex, processedMap) {
 
   // Overwrite or add question data
   if (existingQuestionData) {
+    // 🔧 FIX: Preserve randomizedVersions if it already exists
+    const preservedMapping = existingQuestionData.randomizedVersions;
+    
     // Update existing question data
     existingQuestionData.urls = urls;
     existingQuestionData.processed = processedMap;
     existingQuestionData.selectedVersion = null; // Reset selection
     existingQuestionData.reasons = []; // Reset reasons
-    existingQuestionData.randomizedVersions = null; // Reset mapping
+    
+    // 🔧 FIX: Only reset mapping if it wasn't already set
+    if (!preservedMapping) {
+      existingQuestionData.randomizedVersions = null;
+    } else {
+      existingQuestionData.randomizedVersions = preservedMapping; // Preserve existing mapping
+      console.log('🎯 Preserved existing randomizedVersions mapping:', preservedMapping);
+    }
   } else {
     // Add new question data
     window.voiceQuizApp.session.add({
@@ -1343,12 +1353,41 @@ class VoiceQuizApp {
         const currentQuestionData = window.voiceQuizApp.session.questions[this.currentQuestion];
         const currentTrial = this.trials[this.currentQuestion];
         
+        // 🕵️ DEBUG: Full diagnostic before accessing randomizedVersions
+        console.log('🔍 === FULL DIAGNOSTIC START ===');
+        console.log('🔍 Current question index:', this.currentQuestion);
+        console.log('🔍 Session questions array length:', window.voiceQuizApp.session.questions.length);
+        console.log('🔍 currentQuestionData exists:', !!currentQuestionData);
+        console.log('🔍 currentQuestionData full object:', currentQuestionData);
+        console.log('🔍 All session questions:', window.voiceQuizApp.session.questions);
+        
+        if (currentQuestionData) {
+            console.log('🔍 randomizedVersions exists:', !!currentQuestionData.randomizedVersions);
+            console.log('🔍 randomizedVersions value:', currentQuestionData.randomizedVersions);
+            console.log('🔍 randomizedVersions type:', typeof currentQuestionData.randomizedVersions);
+            console.log('🔍 Other properties:');
+            console.log('   - urls:', !!currentQuestionData.urls);
+            console.log('   - processed:', !!currentQuestionData.processed);
+            console.log('   - selectedVersion:', currentQuestionData.selectedVersion);
+            console.log('   - trialType:', currentQuestionData.trialType);
+            console.log('   - isCatch:', currentQuestionData.isCatch);
+            console.log('   - comparisonSetup:', currentQuestionData.comparisonSetup);
+        }
+        console.log('🔍 === FULL DIAGNOSTIC END ===');
+        
         if (currentQuestionData) {
             currentQuestionData.selectedChoice = choice; // Store the UI choice (left/right)
             currentQuestionData.trialType = currentTrial.type;
             currentQuestionData.isCatch = currentTrial.isCatch;
             
             // CRITICAL: Translate left/right choice to actual version name
+            console.log('🔍 selectChoice debug:', {
+                questionIndex: this.currentQuestion,
+                hasRandomizedVersions: !!currentQuestionData.randomizedVersions,
+                randomizedVersions: currentQuestionData.randomizedVersions,
+                choice: choice
+            });
+            
             if (currentQuestionData.randomizedVersions) {
                 const actualVersion = currentQuestionData.randomizedVersions[choice];
                 currentQuestionData.selectedVersion = actualVersion;
